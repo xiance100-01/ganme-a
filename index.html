@@ -2,333 +2,220 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Candy Crush Saga - Level Edition</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://sdk.applixir.com/applixir.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candy Match Game</title>
     <style>
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{
-            background:linear-gradient(135deg,#FF6B6B,#4ECDC4,#45B7D1);
-            min-height:100vh;
-            font-family:Arial,sans-serif;
-            color:#fff;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            padding:15px 0;
-            margin:0;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
         }
-        .top-bar{
-            width:90%;
-            max-width:400px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            padding:12px 15px;
-            background:rgba(0,0,0,0.2);
-            border-radius:12px;
-            margin-bottom:10px;
-            font-size:16px;
+
+        body {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        .level-box{
-            text-align:center;
-            background:#ffd700;
-            color:#222;
-            padding:8px 18px;
-            border-radius:20px;
-            font-weight:bold;
-            font-size:15px;
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 350px;
+            margin-bottom: 20px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
-        .target-container{
-            width:90%;
-            max-width:400px;
-            background:rgba(255,255,255,0.2);
-            padding:10px 15px;
-            border-radius:10px;
-            margin-bottom:15px;
-            font-size:15px;
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            background: rgba(255,255,255,0.3);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
-        #game-container{
-            width:90%;
-            max-width:400px;
-            aspect-ratio:1/1;
-            background:rgba(255,255,255,0.15);
-            border-radius:15px;
-            display:grid;
-            grid-template-columns:repeat(6, 1fr);
-            gap:4px;
-            padding:8px;
-            margin-bottom:20px;
+
+        .candy {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background: rgba(255,255,255,0.7);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
         }
-        .candy{
-            width:100%;
-            height:100%;
-            border-radius:8px;
-            cursor:pointer;
-            transition:all 0.2s ease;
-            box-shadow:0 2px 4px rgba(0,0,0,0.3);
+
+        .candy:hover {
+            transform: scale(1.1);
         }
-        .candy:active{
-            transform:scale(0.92);
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
         }
-        .candy.selected{
-            border:2px solid #ffffff;
+
+        .ad-btn {
+            background: #ff4081;
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: background 0.2s;
         }
-        .btn-group{
-            width:90%;
-            max-width:400px;
-            display:flex;
-            gap:12px;
-            justify-content:center;
-            flex-wrap:wrap;
-        }
-        .btn{
-            padding:12px 22px;
-            border:none;
-            border-radius:30px;
-            background:#ffffff;
-            color:#ff4757;
-            font-weight:bold;
-            font-size:14px;
-            cursor:pointer;
-            box-shadow:0 2px 6px rgba(0,0,0,0.2);
+
+        .ad-btn:active {
+            background: #d81b60;
         }
     </style>
+    <!-- MONETAG OFFICIAL SDK -->
+    <script async src="https://adserver.monetag.com/js/tag.js"></script>
 </head>
 <body>
+    <div class="game-header">
+        <div>Moves: <span id="moves">30</span></div>
+        <div>Level: <span id="level">1</span></div>
+        <div>Score: <span id="score">0</span></div>
+    </div>
 
-<!-- 音频元素：背景音乐+音效（免费无版权） -->
-<audio id="bgm" loop preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-ethereal-fairy-win-sound-2019.mp3" type="audio/mpeg">
-</audio>
-<audio id="clickSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3" type="audio/mpeg">
-</audio>
-<audio id="clearSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-mechanical-bling-210.mp3" type="audio/mpeg">
-</audio>
-<audio id="winSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3" type="audio/mpeg">
-</audio>
+    <div class="game-board" id="gameBoard"></div>
 
-<div class="top-bar">
-    <div>Moves: <span id="step">30</span></div>
-    <div class="level-box">Level <span id="level">1</span></div>
-    <div>Score: <span id="score">0</span></div>
-</div>
+    <div class="controls">
+        <button class="ad-btn" id="addMovesBtn">Watch Ad +10 Moves</button>
+        <button class="ad-btn" id="doubleScoreBtn">Watch Ad Double Score</button>
+    </div>
 
-<div class="target-container">
-    Level Goal: Collect <span id="target">100</span> Points | Unlock next level
-</div>
+    <script>
+        // 游戏配置
+        const candies = ['🍬', '🍭', '🍫', '🍩', '🧁', '🍪'];
+        let moves = 30;
+        let score = 0;
+        let level = 1;
+        let board = [];
+        const rows = 6;
+        const cols = 6;
 
-<div id="game-container"></div>
+        // 初始化游戏棋盘
+        function initBoard() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            board = [];
 
-<div class="btn-group">
-    <button class="btn" onclick="addStep()">Watch Ad +10 Moves</button>
-    <button class="btn" onclick="doubleScore()">Watch Ad Double Score</button>
-</div>
+            for (let i = 0; i < rows; i++) {
+                board[i] = [];
+                for (let j = 0; j < cols; j++) {
+                    const candyType = candies[Math.floor(Math.random() * candies.length)];
+                    board[i][j] = candyType;
 
-<script>
-// ========== Replace with your AppLixir ID ==========
-const APP_ID = "YOUR_APPLIXIR_ID_HERE";
-
-// 100 Levels Difficulty Configuration
-const levels = [
-    {step:30, target:100}, {step:28, target:150}, {step:26, target:200}, {step:25, target:250}, {step:24, target:300},
-    {step:23, target:350}, {step:22, target:400}, {step:21, target:450}, {step:20, target:500}, {step:19, target:550}
-];
-for(let i=10; i<100; i++) {
-    levels.push({step: Math.max(10, 18 - Math.floor(i/20)), target: 600 + i*50});
-}
-
-// Game State
-let currentLevel = 1;
-let remainingSteps = levels[0].step;
-let targetScore = levels[0].target;
-let currentScore = 0;
-const gameContainer = document.getElementById("game-container");
-let candyGrid = [];
-const candyColors = ['#ff5252','#ff9800','#ffeb3b','#4caf50','#2196f3','#9c27b0'];
-let selectedCandy = null;
-
-// Audio Elements
-const bgm = document.getElementById("bgm");
-const clickSound = document.getElementById("clickSound");
-const clearSound = document.getElementById("clearSound");
-const winSound = document.getElementById("winSound");
-
-// Play BGM on first interaction
-let bgmPlayed = false;
-function playBGM() {
-    if(!bgmPlayed) {
-        bgm.play().catch(err => console.log("Auto-play blocked, will play on click"));
-        bgmPlayed = true;
-    }
-}
-
-// Initialize Ads & Telegram
-function initAds() {
-    if(typeof Applixir !== 'undefined') Applixir.init({appId: APP_ID});
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
-}
-
-// Create Grid
-function createCandyGrid() {
-    candyGrid = [];
-    gameContainer.innerHTML = "";
-    for(let row=0; row<6; row++) {
-        candyGrid[row] = [];
-        for(let col=0; col<6; col++) {
-            const color = candyColors[Math.floor(Math.random()*6)];
-            candyGrid[row][col] = color;
-            const el = document.createElement("div");
-            el.className = "candy";
-            el.style.backgroundColor = color;
-            el.dataset.row = row;
-            el.dataset.col = col;
-            el.addEventListener("click", handleCandyClick);
-            gameContainer.appendChild(el);
-        }
-    }
-}
-
-// Update UI
-function updateUI() {
-    document.getElementById("step").textContent = remainingSteps;
-    document.getElementById("score").textContent = currentScore;
-    document.getElementById("target").textContent = targetScore;
-    document.getElementById("level").textContent = currentLevel;
-}
-
-// Candy Click
-function handleCandyClick(e) {
-    playBGM();
-    clickSound.currentTime = 0;
-    clickSound.play();
-
-    const row = parseInt(e.target.dataset.row);
-    const col = parseInt(e.target.dataset.col);
-
-    if(!selectedCandy) {
-        selectedCandy = {row, col, element: e.target};
-        e.target.classList.add("selected");
-        return;
-    }
-
-    if(selectedCandy.row === row && selectedCandy.col === col) {
-        selectedCandy.element.classList.remove("selected");
-        selectedCandy = null;
-        return;
-    }
-
-    const isAdjacent = (Math.abs(row - selectedCandy.row) === 1 && col === selectedCandy.col) ||
-                       (Math.abs(col - selectedCandy.col) === 1 && row === selectedCandy.row);
-
-    if(isAdjacent) {
-        swapCandies(selectedCandy.row, selectedCandy.col, row, col);
-        remainingSteps--;
-        updateUI();
-        setTimeout(checkForMatches, 300);
-    }
-
-    selectedCandy.element.classList.remove("selected");
-    selectedCandy = null;
-}
-
-// Swap Candies
-function swapCandies(r1,c1,r2,c2) {
-    [candyGrid[r1][c1], candyGrid[r2][c2]] = [candyGrid[r2][c2], candyGrid[r1][c1]];
-    const idx1 = r1*6+c1, idx2 = r2*6+c2;
-    const list = gameContainer.querySelectorAll(".candy");
-    list[idx1].style.backgroundColor = candyGrid[r1][c1];
-    list[idx2].style.backgroundColor = candyGrid[r2][c2];
-}
-
-// Check Matches
-function checkForMatches() {
-    const matches = [];
-    // Horizontal
-    for(let r=0;r<6;r++)for(let c=0;c<4;c++){
-        const co = candyGrid[r][c];
-        if(co&&co===candyGrid[r][c+1]&&co===candyGrid[r][c+2]) matches.push([r,c],[r,c+1],[r,c+2]);
-    }
-    // Vertical
-    for(let c=0;c<6;c++)for(let r=0;r<4;r++){
-        const co = candyGrid[r][c];
-        if(co&&co===candyGrid[r+1][c]&&co===candyGrid[r+2][c]) matches.push([r,c],[r+1,c],[r+2,c]);
-    }
-    if(matches.length>0) {
-        clearSound.currentTime = 0;
-        clearSound.play();
-        processMatches(matches);
-    } else checkLevelCompletion();
-}
-
-// Process Matches
-function processMatches(matches) {
-    currentScore += matches.length *5;
-    updateUI();
-    matches.forEach(([r,c])=>candyGrid[r][c]=null);
-    dropCandies();
-    setTimeout(checkForMatches,500);
-}
-
-// Drop Candies
-function dropCandies() {
-    for(let c=0;c<6;c++){
-        let empty=0;
-        for(let r=5;r>=0;r--){
-            if(!candyGrid[r][c]) empty++;
-            else if(empty>0) {
-                candyGrid[r+empty][c]=candyGrid[r][c];
-                candyGrid[r][c]=null;
+                    const candyElement = document.createElement('div');
+                    candyElement.className = 'candy';
+                    candyElement.textContent = candyType;
+                    candyElement.dataset.row = i;
+                    candyElement.dataset.col = j;
+                    candyElement.addEventListener('click', () => handleCandyClick(i, j));
+                    gameBoard.appendChild(candyElement);
+                }
             }
         }
-        for(let r=0;r<empty;r++) candyGrid[r][c]=candyColors[Math.floor(Math.random()*6)];
-    }
-    const list=gameContainer.querySelectorAll(".candy");
-    let idx=0;
-    for(let r=0;r<6;r++)for(let c=0;c<6;c++) list[idx++].style.backgroundColor=candyGrid[r][c];
-}
 
-// Level Check
-function checkLevelCompletion() {
-    if(currentScore >= targetScore) {
-        winSound.play();
-        alert(`Congratulations! Level ${currentLevel} Completed!`);
-        nextLevel();
-        return;
-    }
-    if(remainingSteps <=0) alert("Out of moves! Watch ad to continue.");
-}
+        // 处理糖果点击
+        function handleCandyClick(row, col) {
+            if (moves <= 0) {
+                alert("No moves left! Watch an ad to get more moves.");
+                return;
+            }
 
-// Next Level
-function nextLevel() {
-    currentLevel++;
-    remainingSteps = levels[currentLevel-1].step;
-    targetScore = levels[currentLevel-1].target;
-    currentScore =0;
-    createCandyGrid();
-    updateUI();
-}
+            // 简单消除逻辑：点击的糖果和相邻的同类型糖果会被消除
+            const candyType = board[row][col];
+            let toRemove = [[row, col]];
 
-// Ads Functions
-function addStep(){
-    Applixir.showRewardedVideo(s=>{if(s){remainingSteps+=10;updateUI();alert("+10 Moves!");}});
-}
-function doubleScore(){
-    Applixir.showRewardedVideo(s=>{if(s){currentScore*=2;updateUI();checkLevelCompletion();alert("Score Doubled!");}});
-}
+            // 检查上下左右相邻的糖果
+            if (row > 0 && board[row-1][col] === candyType) toRemove.push([row-1, col]);
+            if (row < rows-1 && board[row+1][col] === candyType) toRemove.push([row+1, col]);
+            if (col > 0 && board[row][col-1] === candyType) toRemove.push([row, col-1]);
+            if (col < cols-1 && board[row][col+1] === candyType) toRemove.push([row, col+1]);
 
-// Init Game
-function initGame() {
-    initAds();
-    createCandyGrid();
-    updateUI();
-}
-window.addEventListener("load", initGame);
-</script>
+            if (toRemove.length > 1) {
+                // 消除糖果并加分
+                toRemove.forEach(([r, c]) => {
+                    board[r][c] = candies[Math.floor(Math.random() * candies.length)];
+                    document.querySelector(`[data-row="${r}"][data-col="${c}"]`).textContent = board[r][c];
+                });
+
+                score += toRemove.length * 10;
+                moves--;
+                updateUI();
+
+                // 检查升级条件
+                if (score >= level * 100) {
+                    level++;
+                    alert(`Level up! You are now level ${level}`);
+                }
+            } else {
+                alert("No matches! Try another candy.");
+            }
+        }
+
+        // 更新界面显示
+        function updateUI() {
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+        }
+
+        // ==================== MONETAG 广告功能 ====================
+        // +10步广告
+        document.getElementById('addMovesBtn').addEventListener('click', function() {
+            this.textContent = "Loading Ad...";
+            this.disabled = true;
+
+            show_11050366().then(() => {
+                moves += 10;
+                updateUI();
+                alert("✅ Ad watched! +10 Moves!");
+            }).catch(() => {
+                alert("⚠️ Ad failed to load. Please try again later.");
+            }).finally(() => {
+                this.textContent = "Watch Ad +10 Moves";
+                this.disabled = false;
+            });
+        });
+
+        // 双倍积分广告
+        document.getElementById('doubleScoreBtn').addEventListener('click', function() {
+            this.textContent = "Loading Ad...";
+            this.disabled = true;
+
+            show_11050366().then(() => {
+                score *= 2;
+                updateUI();
+                alert("✅ Ad watched! Score doubled!");
+            }).catch(() => {
+                alert("⚠️ Ad failed to load. Please try again later.");
+            }).finally(() => {
+                this.textContent = "Watch Ad Double Score";
+                this.disabled = false;
+            });
+        });
+
+        // 初始化游戏
+        initBoard();
+        updateUI();
+    </script>
 </body>
 </html>
