@@ -18,8 +18,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 10px;
-            overflow: hidden;
+            padding: 20px 10px 80px 10px; /* 底部留白，不被广告遮挡 */
         }
         .game-title {
             font-size: 28px;
@@ -27,7 +26,6 @@
             color: #fff;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
             margin-bottom: 15px;
-            letter-spacing: 1px;
         }
         .status-bar {
             width: 100%;
@@ -38,7 +36,6 @@
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 18px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.15);
         }
         .game-board {
             display: grid;
@@ -48,7 +45,6 @@
             background: rgba(255,255,255,0.25);
             padding: 12px;
             border-radius: 16px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
         }
         .candy-item {
             width: 48px;
@@ -61,10 +57,6 @@
             font-size: 28px;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
-        .candy-item:active {
-            transform: scale(0.93);
         }
         .candy-item.selected {
             box-shadow: 0 0 0 3px #ff3e6c;
@@ -77,16 +69,9 @@
             50% { opacity: 0.3; transform: scale(1.2); }
             100% { opacity: 0; transform: scale(0); }
         }
-        .candy-item.drop-effect {
-            animation: drop 0.25s ease;
-        }
-        @keyframes drop {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
         .ad-button {
             margin-top: 22px;
-            background: #f74877;
+            background: #f74778;
             color: #fff;
             border: none;
             padding: 12px 26px;
@@ -94,30 +79,46 @@
             font-size: 15px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-        }
-        .ad-button:active {
-            background: #d63863;
         }
         .ad-button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        /* 底部横幅广告容器 - 固定定位，不遮挡游戏 */
+        #bottom-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
         }
     </style>
-    <!-- Monetag Ad SDK -->
-    <script async src="https://adserver.monetag.com/js/tag.js"></script>
+    <!-- Monetag 广告SDK -->
+    <script src="https://adserver.monetag.com/js/tag.js"></script>
 </head>
 <body>
     <h1 class="game-title">Candy Crush Joy</h1>
-
     <div class="status-bar">
         <span>Moves: <span id="moveCount">30</span></span>
         <span>Score: <span id="scoreCount">0</span></span>
     </div>
-
     <div class="game-board" id="gameBoard"></div>
-
     <button class="ad-button" id="rewardAdBtn">Watch Ad Get +10 Moves</button>
+
+    <!-- 底部信息流横幅广告 -->
+    <div id="bottom-banner">
+        <!-- Monetag 自动横幅广告 -->
+        <script>
+            // 底部横幅广告自动加载（Telegram Mini App 专用）
+            if (window.show_banner) {
+                show_banner();
+            }
+        </script>
+    </div>
 
 <script>
 const gridSize = 6;
@@ -132,13 +133,13 @@ const boardDom = document.getElementById('gameBoard');
 const moveDom = document.getElementById('moveCount');
 const scoreDom = document.getElementById('scoreCount');
 
+// 游戏初始化
 function initGame() {
     gameGrid = [];
-    for(let r = 0; r < gridSize; r++){
+    for(let r=0;r<gridSize;r++){
         gameGrid[r] = [];
-        for(let c = 0; c < gridSize; c++){
-            let randomIdx = Math.floor(Math.random() * candyIcons.length);
-            gameGrid[r][c] = candyIcons[randomIdx];
+        for(let c=0;c<gridSize;c++){
+            gameGrid[r][c] = candyIcons[Math.floor(Math.random()*candyIcons.length)];
         }
     }
     renderBoard();
@@ -146,8 +147,8 @@ function initGame() {
 
 function renderBoard() {
     boardDom.innerHTML = '';
-    for(let r = 0; r < gridSize; r++){
-        for(let c = 0; c < gridSize; c++){
+    for(let r=0;r<gridSize;r++){
+        for(let c=0;c<gridSize;c++){
             let cell = document.createElement('div');
             cell.className = 'candy-item';
             cell.dataset.row = r;
@@ -162,180 +163,87 @@ function renderBoard() {
 }
 
 async function cellClick(row, col) {
-    if(isAnimating || moveNum <= 0) return;
-    if(!selectPos){
-        selectPos = [row, col];
-        setCellSelected(row, col);
-        return;
-    }
-
-    let [sRow, sCol] = selectPos;
-    clearSelected();
-    let distance = Math.abs(row - sRow) + Math.abs(col - sCol);
-    if(distance !== 1){
-        selectPos = [row, col];
-        setCellSelected(row, col);
-        return;
-    }
-
-    isAnimating = true;
-    [gameGrid[row][col], gameGrid[sRow][sCol]] = [gameGrid[sRow][sCol], gameGrid[row][col]];
+    if(isAnimating || moveNum<=0) return;
+    if(!selectPos){ selectPos=[row,col]; return; }
+    let [sr,sc] = selectPos;
+    if(Math.abs(row-sr)+Math.abs(col-sc)!==1){ selectPos=[row,col]; return; }
+    
+    isAnimating=true;
+    [gameGrid[row][col],gameGrid[sr][sc]]=[gameGrid[sr][sc],gameGrid[row][col]];
     renderBoard();
     await sleep(200);
-
+    
     if(checkMatchExist()){
         moveNum--;
         await matchProcess();
     }else{
-        [gameGrid[row][col], gameGrid[sRow][sCol]] = [gameGrid[sRow][sCol], gameGrid[row][col]];
+        [gameGrid[row][col],gameGrid[sr][sc]]=[gameGrid[sr][sc],gameGrid[row][col]];
         renderBoard();
     }
-    selectPos = null;
-    isAnimating = false;
+    selectPos=null;
+    isAnimating=false;
 }
 
 async function matchProcess(){
-    let markRemove = getMatchMark();
-    addEliminateEffect(markRemove);
+    let mark=getMatchMark();
     await sleep(300);
-
-    eliminateMatch(markRemove);
+    eliminateMatch(mark);
     dropNewCandy();
     renderBoard();
-    addDropEffect();
-    await sleep(250);
-
     while(checkMatchExist()){
-        let newMark = getMatchMark();
-        addEliminateEffect(newMark);
+        mark=getMatchMark();
         await sleep(300);
-        eliminateMatch(newMark);
+        eliminateMatch(mark);
         dropNewCandy();
         renderBoard();
-        addDropEffect();
-        await sleep(250);
     }
 }
 
-function checkMatchExist() {
-    for(let r = 0; r < gridSize; r++){
-        for(let c = 0; c < gridSize - 2; c++){
-            let curr = gameGrid[r][c];
-            if(curr && curr === gameGrid[r][c+1] && curr === gameGrid[r][c+2]) return true;
-        }
-    }
-    for(let c = 0; c < gridSize; c++){
-        for(let r = 0; r < gridSize - 2; r++){
-            let curr = gameGrid[r][c];
-            if(curr && curr === gameGrid[r+1][c] && curr === gameGrid[r+2][c]) return true;
-        }
-    }
+function checkMatchExist(){
+    for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize-2;c++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r][c+1]&&gameGrid[r][c]===gameGrid[r][c+2])return true;
+    for(let c=0;c<gridSize;c++)for(let r=0;r<gridSize-2;r++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r+1][c]&&gameGrid[r][c]===gameGrid[r+2][c])return true;
     return false;
 }
 
 function getMatchMark(){
-    let markRemove = Array(gridSize).fill(false).map(() => Array(gridSize).fill(false));
-    for(let r = 0; r < gridSize; r++){
-        for(let c = 0; c < gridSize - 2; c++){
-            let curr = gameGrid[r][c];
-            if(curr && curr === gameGrid[r][c+1] && curr === gameGrid[r][c+2]){
-                markRemove[r][c] = markRemove[r][c+1] = markRemove[r][c+2] = true;
-            }
-        }
-    }
-    for(let c = 0; c < gridSize; c++){
-        for(let r = 0; r < gridSize - 2; r++){
-            let curr = gameGrid[r][c];
-            if(curr && curr === gameGrid[r+1][c] && curr === gameGrid[r+2][c]){
-                markRemove[r][c] = markRemove[r+1][c] = markRemove[r+2][c] = true;
-            }
-        }
-    }
-    return markRemove;
+    let m=Array.from({length:gridSize},()=>Array(gridSize).fill(false));
+    for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize-2;c++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r][c+1]&&gameGrid[r][c]===gameGrid[r][c+2])m[r][c]=m[r][c+1]=m[r][c+2]=true;
+    for(let c=0;c<gridSize;c++)for(let r=0;r<gridSize-2;r++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r+1][c]&&gameGrid[r][c]===gameGrid[r+2][c])m[r][c]=m[r+1][c]=m[r+2][c]=true;
+    return m;
 }
 
-function addEliminateEffect(mark){
-    const cells = boardDom.querySelectorAll('.candy-item');
-    cells.forEach(cell => {
-        let r = parseInt(cell.dataset.row);
-        let c = parseInt(cell.dataset.col);
-        if(mark[r][c]) cell.classList.add('remove-effect');
-    });
+function eliminateMatch(mark){
+    let cnt=0;
+    for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize;c++)if(mark[r][c]){gameGrid[r][c]=null;cnt++;}
+    gameScore+=cnt*10;
 }
 
-function addDropEffect(){
-    const cells = boardDom.querySelectorAll('.candy-item');
-    cells.forEach(cell => cell.classList.add('drop-effect'));
-}
-
-function eliminateMatch(markRemove) {
-    let removeCount = 0;
-    for(let r = 0; r < gridSize; r++){
-        for(let c = 0; c < gridSize; c++){
-            if(markRemove[r][c]){
-                gameGrid[r][c] = null;
-                removeCount++;
-            }
-        }
-    }
-    gameScore += removeCount * 10;
-    scoreDom.innerText = gameScore;
-}
-
-function dropNewCandy() {
-    for(let col = 0; col < gridSize; col++){
-        let tempArr = [];
-        for(let row = 0; row < gridSize; row++){
-            if(gameGrid[row][col]) tempArr.push(gameGrid[row][col]);
-        }
-        for(let row = gridSize - 1; row >= 0; row--){
-            gameGrid[row][col] = tempArr.pop() || candyIcons[Math.floor(Math.random() * candyIcons.length)];
-        }
+function dropNewCandy(){
+    for(let c=0;c<gridSize;c++){
+        let t=[];
+        for(let r=0;r<gridSize;r++)if(gameGrid[r][c])t.push(gameGrid[r][c]);
+        for(let r=gridSize-1;r>=0;r--)gameGrid[r][c]=t.pop()||candyIcons[Math.floor(Math.random()*candyIcons.length)];
     }
 }
 
-function setCellSelected(r,c){
-    const cells = boardDom.querySelectorAll('.candy-item');
-    cells.forEach(cell => {
-        if(parseInt(cell.dataset.row) === r && parseInt(cell.dataset.col) === c) cell.classList.add('selected');
-    });
-}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-function clearSelected(){
-    const cells = boardDom.querySelectorAll('.candy-item');
-    cells.forEach(cell => cell.classList.remove('selected'));
-}
-
-function sleep(ms){
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// ==================== 修复广告按钮：永不卡死 ====================
-document.getElementById('rewardAdBtn').addEventListener('click', async function(){
+// 奖励广告：看广告+10步（Rewarded Popup 官方代码）
+document.getElementById('rewardAdBtn').addEventListener('click', function(){
     const btn = this;
-    btn.innerText = "Loading Ad...";
+    btn.innerText = "Loading...";
     btn.disabled = true;
 
-    try {
-        // 判断广告SDK是否加载完成
-        if (typeof show_11050366 !== 'function') {
-            throw new Error("Ad SDK not loaded");
-        }
-        
-        await show_11050366();
-        // 广告成功：奖励10步
+    show_11050366('pop').then(() => {
         moveNum += 10;
         moveDom.innerText = moveNum;
-        alert('✅ Ad completed! +10 Moves');
-    } catch (err) {
-        // 广告失败：提示用户
-        alert('⚠️ Ad unavailable. Please try again later.');
-        console.log(err);
-    } finally {
-        // 无论成功失败，按钮必恢复！
+        alert("✅ Success! +10 Moves");
+    }).catch(e => {
+        alert("⚠️ Ad Unavailable (VPN Only)");
+    }).finally(() => {
         btn.innerText = "Watch Ad Get +10 Moves";
         btn.disabled = false;
-    }
+    });
 });
 
 initGame();
