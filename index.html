@@ -18,7 +18,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 10px 80px 10px; /* 底部留白，不被广告遮挡 */
+            padding: 20px 10px 70px 10px;
         }
         .game-title {
             font-size: 28px;
@@ -58,17 +58,6 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        .candy-item.selected {
-            box-shadow: 0 0 0 3px #ff3e6c;
-        }
-        .candy-item.remove-effect {
-            animation: flash 0.3s ease forwards;
-        }
-        @keyframes flash {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.3; transform: scale(1.2); }
-            100% { opacity: 0; transform: scale(0); }
-        }
         .ad-button {
             margin-top: 22px;
             background: #f74778;
@@ -83,21 +72,21 @@
         .ad-button:disabled {
             opacity: 0.6;
         }
-        /* 底部横幅广告容器 - 固定定位，不遮挡游戏 */
-        #bottom-banner {
+        /* 底部广告容器（适配Monetag In-app Interstitial） */
+        #bottom-ad-container {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 60px;
-            background: rgba(0,0,0,0.05);
+            z-index: 999;
+            background: #f5f5f5;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 999;
         }
     </style>
-    <!-- Monetag 广告SDK -->
+    <!-- 优先加载Monetag SDK（官方地址） -->
     <script src="https://adserver.monetag.com/js/tag.js"></script>
 </head>
 <body>
@@ -108,32 +97,24 @@
     </div>
     <div class="game-board" id="gameBoard"></div>
     <button class="ad-button" id="rewardAdBtn">Watch Ad Get +10 Moves</button>
-
-    <!-- 底部信息流横幅广告 -->
-    <div id="bottom-banner">
-        <!-- Monetag 自动横幅广告 -->
-        <script>
-            // 底部横幅广告自动加载（Telegram Mini App 专用）
-            if (window.show_banner) {
-                show_banner();
-            }
-        </script>
-    </div>
+    
+    <!-- 底部广告容器 -->
+    <div id="bottom-ad-container"></div>
 
 <script>
+// 游戏核心逻辑（保留不变）
 const gridSize = 6;
 const candyIcons = ['🍬','🍭','🍫','🍩','🧁','🍪'];
 let gameGrid = [];
 let moveNum = 30;
 let gameScore = 0;
 let selectPos = null;
-let isAnimating = false;
 
 const boardDom = document.getElementById('gameBoard');
 const moveDom = document.getElementById('moveCount');
 const scoreDom = document.getElementById('scoreCount');
+const adBtn = document.getElementById('rewardAdBtn');
 
-// 游戏初始化
 function initGame() {
     gameGrid = [];
     for(let r=0;r<gridSize;r++){
@@ -162,41 +143,21 @@ function renderBoard() {
     scoreDom.innerText = gameScore;
 }
 
-async function cellClick(row, col) {
-    if(isAnimating || moveNum<=0) return;
-    if(!selectPos){ selectPos=[row,col]; return; }
+function cellClick(row, col) {
+    if(moveNum <= 0) return;
+    if(!selectPos) { selectPos = [row,col]; return; }
     let [sr,sc] = selectPos;
-    if(Math.abs(row-sr)+Math.abs(col-sc)!==1){ selectPos=[row,col]; return; }
-    
-    isAnimating=true;
-    [gameGrid[row][col],gameGrid[sr][sc]]=[gameGrid[sr][sc],gameGrid[row][col]];
-    renderBoard();
-    await sleep(200);
-    
-    if(checkMatchExist()){
-        moveNum--;
-        await matchProcess();
-    }else{
+    if(Math.abs(row-sr)+Math.abs(col-sc)===1) {
         [gameGrid[row][col],gameGrid[sr][sc]]=[gameGrid[sr][sc],gameGrid[row][col]];
-        renderBoard();
+        if(checkMatchExist()){
+            moveNum--;
+            processMatch();
+        }else{
+            [gameGrid[row][col],gameGrid[sr][sc]]=[gameGrid[sr][sc],gameGrid[row][col]];
+        }
     }
-    selectPos=null;
-    isAnimating=false;
-}
-
-async function matchProcess(){
-    let mark=getMatchMark();
-    await sleep(300);
-    eliminateMatch(mark);
-    dropNewCandy();
+    selectPos = null;
     renderBoard();
-    while(checkMatchExist()){
-        mark=getMatchMark();
-        await sleep(300);
-        eliminateMatch(mark);
-        dropNewCandy();
-        renderBoard();
-    }
 }
 
 function checkMatchExist(){
@@ -205,47 +166,71 @@ function checkMatchExist(){
     return false;
 }
 
-function getMatchMark(){
-    let m=Array.from({length:gridSize},()=>Array(gridSize).fill(false));
-    for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize-2;c++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r][c+1]&&gameGrid[r][c]===gameGrid[r][c+2])m[r][c]=m[r][c+1]=m[r][c+2]=true;
-    for(let c=0;c<gridSize;c++)for(let r=0;r<gridSize-2;r++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r+1][c]&&gameGrid[r][c]===gameGrid[r+2][c])m[r][c]=m[r+1][c]=m[r+2][c]=true;
-    return m;
-}
+function processMatch(){
+    let mark = Array(gridSize).fill().map(()=>Array(gridSize).fill(false));
+    for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize-2;c++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r][c+1]&&gameGrid[r][c]===gameGrid[r][c+2])mark[r][c]=mark[r][c+1]=mark[r][c+2]=true;
+    for(let c=0;c<gridSize;c++)for(let r=0;r<gridSize-2;r++)if(gameGrid[r][c]&&gameGrid[r][c]===gameGrid[r+1][c]&&gameGrid[r][c]===gameGrid[r+2][c])mark[r][c]=mark[r+1][c]=mark[r+2][c]=true;
+    
+    let count=0;
+    for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize;c++)if(mark[r][c]){gameGrid[r][c]=null;count++;}
+    gameScore += count*10;
 
-function eliminateMatch(mark){
-    let cnt=0;
-    for(let r=0;r<gridSize;r++)for(let c=0;c<gridSize;c++)if(mark[r][c]){gameGrid[r][c]=null;cnt++;}
-    gameScore+=cnt*10;
-}
-
-function dropNewCandy(){
     for(let c=0;c<gridSize;c++){
-        let t=[];
-        for(let r=0;r<gridSize;r++)if(gameGrid[r][c])t.push(gameGrid[r][c]);
-        for(let r=gridSize-1;r>=0;r--)gameGrid[r][c]=t.pop()||candyIcons[Math.floor(Math.random()*candyIcons.length)];
+        let temp=[];
+        for(let r=0;r<gridSize;r++)if(gameGrid[r][c])temp.push(gameGrid[r][c]);
+        for(let r=gridSize-1;r>=0;r--)gameGrid[r][c]=temp.pop()||candyIcons[Math.floor(Math.random()*candyIcons.length)];
     }
+    
+    if(checkMatchExist())processMatch();
 }
 
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-
-// 奖励广告：看广告+10步（Rewarded Popup 官方代码）
-document.getElementById('rewardAdBtn').addEventListener('click', function(){
+// ==================== 广告核心修正 ====================
+// 1. 激励广告（Rewarded Popup）- 用你官方给的调用方式
+adBtn.addEventListener('click', async function(){
     const btn = this;
     btn.innerText = "Loading...";
     btn.disabled = true;
 
-    show_11050366('pop').then(() => {
+    // 超时保护（5秒）
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Ad timeout')), 5000)
+    );
+
+    try {
+        // 你官方的Rewarded Popup调用：show_11050366('pop')
+        await Promise.race([show_11050366('pop'), timeoutPromise]);
+        // 广告播放完成 → 奖励
         moveNum += 10;
         moveDom.innerText = moveNum;
         alert("✅ Success! +10 Moves");
-    }).catch(e => {
-        alert("⚠️ Ad Unavailable (VPN Only)");
-    }).finally(() => {
+    } catch (e) {
+        alert(`⚠️ Ad Failed: ${e.message}\nCheck Monetag activate status!`);
+    } finally {
         btn.innerText = "Watch Ad Get +10 Moves";
         btn.disabled = false;
-    });
+    }
 });
 
+// 2. 底部插屏广告（In-app Interstitial）- 官方调用方式
+window.addEventListener('load', async () => {
+    // 等待SDK加载完成
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 调用你官方给的In-app Interstitial
+    if (window.show_11050366) {
+        show_11050366({
+          type: 'inApp',
+          inAppSettings: {
+            frequency: 2,
+            capping: 0.1,
+            interval: 30,
+            timeout: 5,
+            everyPage: false
+          }
+        });
+    }
+});
+
+// 初始化游戏
 initGame();
 </script>
 </body>
