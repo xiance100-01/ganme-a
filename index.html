@@ -1,149 +1,376 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Candy Crush Joy</title>
-    <!-- RichAds 官方SDK (你的ID已填入) -->
-    <script src="https://richinfo.co/richpartners/telegram/js/tg-ob.js"></script>
-    <style>
-        * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
-        body {background:linear-gradient(135deg,#ff9a9e,#fecfef);min-height:100vh;padding:15px;display:flex;flex-direction:column;align-items:center;color:#fff}
-        .game-title {font-size:28px;background:linear-gradient(to right,#ff6b6b,#ffd93d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:5px}
-        .tip {font-size:12px;color:#ff4757;background:#fff;padding:4px 10px;border-radius:20px;margin-bottom:10px}
-        .status {display:flex;gap:20px;background:rgba(255,255,255,.2);padding:10px 20px;border-radius:15px;margin-bottom:10px}
-        .props {display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap}
-        .prop {width:50px;height:50px;border-radius:12px;border:none;background:#fff;font-size:22px;cursor:pointer}
-        .board {display:grid;grid-template-columns:repeat(6,50px);grid-template-rows:repeat(6,50px);gap:6px;background:rgba(255,255,255,.3);padding:15px;border-radius:20px}
-        .candy {width:50px;height:50px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;transition:.3s}
-        .candy.eliminate {animation:eliminate .5s forwards}
-        .candy.fall {animation:fall .4s forwards}
-        .candy.selected {transform:scale(1.1);border:3px solid #ff6b6b}
-        .ad-buttons {margin-top:15px;display:flex;gap:10px}
-        .ad-btn {padding:12px 20px;border-radius:30px;border:none;background:linear-gradient(to right,#ff3838,#ff6b6b);color:#fff;font-weight:bold}
-        @keyframes eliminate {0%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.5}100%{transform:scale(0);opacity:0}}
-        @keyframes fall {0%{transform:translateY(-30px);opacity:0}100%{transform:translateY(0);opacity:1}}
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candy Crush Joy</title>
+  <script src="https://cdn.adsgram.ai/adsgram-sdk.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', Arial, sans-serif;
+    }
+    body {
+      background: linear-gradient(-45deg, #ff6b9d, #c44569, #f8b500, #ff7675);
+      background-size: 400% 400%;
+      animation: bgGradient 8s ease infinite;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      padding-bottom: 60px;
+    }
+    @keyframes bgGradient { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    .game-container {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+      backdrop-filter: blur(10px);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .level { font-size: 20px; font-weight: 800; color: #ff477e; }
+    .stats { display: flex; gap: 20px; font-size: 17px; font-weight: 700; }
+    .score { color: #ff6b6b; }
+    .moves { color: #00b894; }
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin: 20px 0;
+      padding: 10px;
+      background: linear-gradient(135deg, #fdcbf2, #dff9fb);
+      border-radius: 15px;
+      position: relative;
+    }
+    .candy {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+      border: 2px solid rgba(255,255,255,0.4);
+      position: relative;
+      z-index: 1;
+    }
+    .candy:hover { transform: scale(1.08); }
+    .candy.eliminate {
+      animation: eliminate 0.5s ease forwards;
+    }
+    @keyframes eliminate {
+      0%{transform: scale(1); opacity:1;}
+      50%{transform: scale(1.2); opacity:0.5;}
+      100%{transform: scale(0); opacity:0;}
+    }
+    /* 固定图案对应色系（主色统一，渐变区分层次） */
+    /* 🍭 棒棒糖 - 紫色系 */
+    .c1 { background: linear-gradient(135deg, #5f27cd, #341f97); }
+    .c1-alt { background: linear-gradient(135deg, #74b9ff, #0984e3); } /* 同图案浅紫渐变 */
+    /* 🍬 糖果 - 橙色系 */
+    .c2 { background: linear-gradient(135deg, #ff9f43, #ee5a24); }
+    .c2-alt { background: linear-gradient(135deg, #fdcb6e, #e17055); } /* 同图案浅橙渐变 */
+    /* 🧁 纸杯蛋糕 - 粉色系 */
+    .c3 { background: linear-gradient(135deg, #ff9ff3, #f368e0); }
+    .c3-alt { background: linear-gradient(135deg, #fab1a0, #fd79a8); } /* 同图案浅粉渐变 */
+    /* 🍪 饼干 - 红色系 */
+    .c4 { background: linear-gradient(135deg, #ff6b6b, #feca57); }
+    .c4-alt { background: linear-gradient(135deg, #fd79a8, #fdcb6e); } /* 同图案浅红渐变 */
+    /* 🍫 巧克力 - 青色系 */
+    .c5 { background: linear-gradient(135deg, #1dd1a1, #00d2d3); }
+    .c5-alt { background: linear-gradient(135deg, #00cec9, #81ecec); } /* 同图案浅青渐变 */
+    /* 🎂 蛋糕 - 蓝色系 */
+    .c6 { background: linear-gradient(135deg, #48dbfb, #0abde3); }
+    .c6-alt { background: linear-gradient(135deg, #74b9ff, #a29bfe); } /* 同图案浅蓝渐变 */
+
+    .tools { display: flex; gap: 12px; margin: 20px 0; justify-content: center; }
+    .tool-btn {
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #ff6b6b, #ff477e);
+      color: white; border: none; border-radius: 12px;
+      cursor: pointer; font-size: 14px; font-weight: 600;
+      transition: 0.2s;
+    }
+    .tool-btn:hover { transform: translateY(-2px); }
+    .ad-btn {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: white; border: none; border-radius: 15px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      transition: 0.2s; margin-top:10px;
+    }
+    .ad-btn:hover { transform: scale(1.02); }
+    #banner-ad {
+      position: fixed; bottom:0; left:0;
+      width:100%; height:50px; background:#111;
+    }
+  </style>
 </head>
 <body>
-    <h1 class="game-title">CANDY CRUSH JOY</h1>
-    <div class="tip">🎁 WATCH ADS GET FREE PROPS & MOVES!</div>
 
-    <div class="status">
-        <div>Steps: <span id="moves">30</span></div>
-        <div>Score: <span id="score">0</span></div>
+<div class="game-container">
+  <div class="header">
+    <div class="level">Level: <span id="level">1</span></div>
+    <div class="stats">
+      <div class="score">Score: <span id="score">0</span></div>
+      <div class="moves">Moves: <span id="moves">25</span></div>
     </div>
+  </div>
 
-    <div class="props">
-        <button class="prop" id="bomb">💣</button>
-        <button class="prop" id="swap">🔄</button>
-        <button class="prop" id="hammer">🔨</button>
-        <button class="prop" id="refresh">🔃</button>
-        <button class="prop" id="addSteps">➕</button>
-    </div>
+  <div class="game-board" id="board"></div>
 
-    <div class="board" id="board"></div>
+  <div class="tools">
+    <button class="tool-btn" onclick="useHammer()">🔨 Hammer</button>
+    <button class="tool-btn" onclick="useBomb()">💣 Bomb</button>
+    <button class="tool-btn" onclick="useSwap()">🔄 Swap</button>
+  </div>
 
-    <div class="ad-buttons">
-        <button class="ad-btn" id="adSteps">🎬 WATCH AD +10 STEPS</button>
-        <button class="ad-btn" id="adProp">🎁 WATCH AD GET PROP</button>
-    </div>
+  <button class="ad-btn" onclick="watchAdForReward()">Watch Ad +10 Moves</button>
+</div>
+
+<div id="banner-ad"></div>
 
 <script>
-    // 游戏核心配置
-    const SIZE = 6;
-    const CANDIES = ['🍬','🍭','🍫','🍩','🧁','🍪'];
-    let board = [], moves=30, score=0, selected=null, isAnimating=false;
-    const boardEl = document.getElementById('board');
-    const movesEl = document.getElementById('moves');
-    const scoreEl = document.getElementById('score');
+  // 广告配置（你的ID已填好）
+  const CONFIG = {
+    appId: "@CandyGameA", rewardedId: "32626",
+    interstitialId: "32628", bannerId: "32629"
+  };
 
-    // 初始化棋盘
-    function init(){
-        board = [];
-        for(let r=0;r<SIZE;r++){ board[r]=[]; for(let c=0;c<SIZE;c++) board[r][c] = CANDIES[Math.floor(Math.random()*CANDIES.length)]; }
-        render();
+  // 核心规则：固定图案对应色系（解决视觉混乱）
+  const ROWS = 6, COLS = 6;
+  // 糖果图案 + 对应色系（主色+备选渐变，保证同图案同色系）
+  const CANDY_CONFIG = [
+    { type: "🍭", colors: ["c1", "c1-alt"] }, // 棒棒糖-紫色系
+    { type: "🍬", colors: ["c2", "c2-alt"] }, // 糖果-橙色系
+    { type: "🧁", colors: ["c3", "c3-alt"] }, // 纸杯蛋糕-粉色系
+    { type: "🍪", colors: ["c4", "c4-alt"] }, // 饼干-红色系
+    { type: "🍫", colors: ["c5", "c5-alt"] }, // 巧克力-青色系
+    { type: "🎂", colors: ["c6", "c6-alt"] }  // 蛋糕-蓝色系
+  ];
+  
+  let AG;
+  let board = [];
+  let score = 0, moves = 25, level = 1;
+  let selectedCandy = null;
+
+  // 初始化游戏
+  window.onload = async () => {
+    createValidBoard();
+    renderBoard();
+    try { AG = new Adsgram(CONFIG); await AG.loadBannerAd({container:document.getElementById("banner-ad")}); }catch(e){}
+  };
+
+  // 创建无初始三连的合法棋盘
+  function createValidBoard() {
+    board = [];
+    for (let r = 0; r < ROWS; r++) {
+      board[r] = [];
+      for (let c = 0; c < COLS; c++) {
+        let candyData;
+        do {
+          // 随机选图案 → 固定选对应色系（主色/备选渐变）
+          const configIdx = Math.floor(Math.random() * CANDY_CONFIG.length);
+          const colorIdx = Math.floor(Math.random() * CANDY_CONFIG[configIdx].colors.length);
+          candyData = {
+            type: CANDY_CONFIG[configIdx].type,
+            bg: CANDY_CONFIG[configIdx].colors[colorIdx]
+          };
+          board[r][c] = candyData;
+        } while (checkTempMatch(r, c));
+      }
     }
+  }
 
-    // 渲染界面
-    function render(){
-        boardEl.innerHTML = '';
-        for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
-            const d = document.createElement('div');
-            d.classList.add('candy');
-            d.dataset.r=r; d.dataset.c=c;
-            d.innerText = board[r][c];
-            d.onclick = ()=>click(r,c);
-            boardEl.appendChild(d);
+  // 渲染棋盘
+  function renderBoard() {
+    const container = document.getElementById("board");
+    container.innerHTML = "";
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = document.createElement("div");
+        cell.className = `candy ${board[r][c].bg}`;
+        cell.innerText = board[r][c].type;
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        cell.onclick = () => selectCell(cell);
+        container.appendChild(cell);
+      }
+    }
+    updateUI();
+  }
+
+  // 选择/交换糖果
+  function selectCell(cell) {
+    if (moves <= 0) { showInterstitialAd(); alert("No moves left!"); return; }
+    const r = parseInt(cell.dataset.row);
+    const c = parseInt(cell.dataset.col);
+
+    if (!selectedCandy) {
+      selectedCandy = cell;
+      cell.style.transform = "scale(1.1)";
+    } else {
+      const r1 = parseInt(selectedCandy.dataset.row);
+      const c1 = parseInt(selectedCandy.dataset.col);
+      
+      if (isAdjacent(r, c, r1, c1)) {
+        swap(r, c, r1, c1);
+        moves--;
+        const matches = findAllMatches();
+        if (matches.length > 0) {
+          setTimeout(() => removeMatches(matches), 300);
+        } else {
+          swap(r, c, r1, c1);
         }
-        movesEl.innerText = moves;
-        scoreEl.innerText = score;
+      }
+      selectedCandy.style.transform = "scale(1)";
+      selectedCandy = null;
     }
+  }
 
-    // 点击交换
-    async function click(r,c){
-        if(isAnimating || moves<=0) return;
-        if(!selected){ selected=[r,c]; sel(r,c,1); return; }
-        const [sr,sc] = selected;
-        if(adj(r,c,sr,sc)){
-            swap(r,c,sr,sc);
-            if(matches()){ moves--; await anim(); }else swap(r,c,sr,sc);
+  // 判断相邻
+  function isAdjacent(r1, c1, r2, c2) {
+    return (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
+  }
+
+  // 交换糖果数据
+  function swap(r1, c1, r2, c2) {
+    [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+    renderBoard();
+  }
+
+  // 查找所有匹配（相同图案=可消除）
+  function findAllMatches() {
+    const matches = new Set();
+
+    // 横向匹配
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS - 2; c++) {
+        const type = board[r][c].type;
+        if (type === board[r][c+1].type && type === board[r][c+2].type) {
+          matches.add(`${r},${c}`); matches.add(`${r},${c+1}`); matches.add(`${r},${c+2}`);
         }
-        sel(sr,sc,0); selected=null; render();
+      }
     }
 
-    // 辅助函数
-    function sel(r,e,s){ document.querySelector(`[data-r="${r}"][data-c="${e}"]`).classList.toggle('selected',s); }
-    function adj(r1,c1,r2,c2){ return (Math.abs(r1-r2)+Math.abs(c1-c2))===1; }
-    function swap(r1,c1,r2,c2){ [board[r1][c1],board[r2][c2]] = [board[r2][c2],board[r1][c1]]; }
-
-    // 检测消除
-    function matches(){
-        let m=false;
-        for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE-2;c++) if(board[r][c]&&board[r][c]==board[r][c+1]&&board[r][c]==board[r][c+2]){ m=true; board[r][c]=board[r][c+1]=board[r][c+2]=null; }
-        for(let c=0;c<SIZE;c++) for(let r=0;r<SIZE-2;r++) if(board[r][c]&&board[r][c]==board[r+1][c]&&board[r][c]==board[r+2][c]){ m=true; board[r][c]=board[r+1][c]=board[r+2][c]=null; }
-        return m;
+    // 纵向匹配
+    for (let c = 0; c < COLS; c++) {
+      for (let r = 0; r < ROWS - 2; r++) {
+        const type = board[r][c].type;
+        if (type === board[r+1][c].type && type === board[r+2][c].type) {
+          matches.add(`${r},${c}`); matches.add(`${r+1},${c}`); matches.add(`${r+2},${c}`);
+        }
+      }
     }
 
-    // 消除动画+下落填充
-    async function anim(){
-        isAnimating=true;
-        document.querySelectorAll('.candy').forEach((d,i)=>{ if(!board[Math.floor(i/SIZE)][i%SIZE]) d.classList.add('eliminate'); });
-        await new Promise(r=>setTimeout(r,500));
-        score+=50; fall(); fill();
-        await new Promise(r=>setTimeout(r,400));
-        if(matches()) await anim();
-        isAnimating=false;
+    return Array.from(matches).map(s => s.split(",").map(Number));
+  }
+
+  // 消除动画+计分
+  function removeMatches(matches) {
+    if (matches.length === 0) return;
+    const cells = document.querySelectorAll(".candy");
+    matches.forEach(([r, c]) => {
+      cells[r * COLS + c].classList.add("eliminate");
+      score += 20;
+    });
+    updateUI();
+
+    setTimeout(() => {
+      matches.forEach(([r, c]) => board[r][c] = null);
+      dropCandies();
+      fillBoard();
+      setTimeout(() => {
+        const newMatches = findAllMatches();
+        newMatches.length > 0 ? removeMatches(newMatches) : checkLevelUp();
+      }, 400);
+    }, 500);
+  }
+
+  // 糖果下落
+  function dropCandies() {
+    for (let c = 0; c < COLS; c++) {
+      let emptyRow = ROWS - 1;
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r][c]) {
+          if (emptyRow !== r) {
+            board[emptyRow][c] = board[r][c];
+            board[r][c] = null;
+          }
+          emptyRow--;
+        }
+      }
     }
+  }
 
-    function fall(){ for(let c=0;c<SIZE;c++) for(let r=SIZE-1;r>0;r--) if(!board[r][c]){ board[r][c]=board[r-1][c]; board[r-1][c]=null; } }
-    function fill(){ for(let c=0;c<SIZE;c++) if(!board[0][c]) board[0][c] = CANDIES[Math.floor(Math.random()*CANDIES.length)]; }
+  // 填充空白（保持同图案同色系）
+  function fillBoard() {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (!board[r][c]) {
+          const configIdx = Math.floor(Math.random() * CANDY_CONFIG.length);
+          const colorIdx = Math.floor(Math.random() * CANDY_CONFIG[configIdx].colors.length);
+          board[r][c] = {
+            type: CANDY_CONFIG[configIdx].type,
+            bg: CANDY_CONFIG[configIdx].colors[colorIdx]
+          };
+        }
+      }
+    }
+    renderBoard();
+  }
 
-    // 道具功能
-    document.getElementById('bomb').onclick=()=>{ board[2][2]=board[2][3]=board[3][2]=board[3][3]=null; anim(); };
-    document.getElementById('swap').onclick=()=>alert("Click 2 candies to swap!");
-    document.getElementById('hammer').onclick=()=>{ const r=Math.floor(Math.random()*SIZE),c=Math.floor(Math.random()*SIZE); board[r][c]=null; anim(); };
-    document.getElementById('refresh').onclick=init;
-    document.getElementById('addSteps').onclick=()=>{ moves+=5; render(); };
+  // 初始防三连
+  function checkTempMatch(r, c) {
+    const type = board[r][c].type;
+    if (c >= 2 && board[r][c-1].type === type && board[r][c-2].type === type) return true;
+    if (r >= 2 && board[r-1][c].type === type && board[r-2][c].type === type) return true;
+    return false;
+  }
 
-    // ==================== RichAds 广告(修复版，不崩溃) ====================
-    window.TelegramAdsController = new TelegramAdsController();
-    window.TelegramAdsController.initialize({ pubId: "1012691", appId: "7455" });
+  // 关卡升级
+  function checkLevelUp() {
+    if (score >= level * 100) {
+      level++; moves = 25;
+      showInterstitialAd();
+      alert("LEVEL UP!");
+      createValidBoard(); renderBoard();
+    }
+  }
 
-    // 看广告+步数
-    document.getElementById('adSteps').onclick=()=>{
-        try{ TelegramAdsController.showAd({adType:'rewarded',onSuccess:()=>{ moves+=10; render(); alert("✅ +10 Steps!"); }}); }
-        catch(e){ alert("⚠️ Ad loading... Please try later!"); }
-    };
+  // 道具功能
+  function useHammer() { alert("Hammer: Destroy 1 candy!"); }
+  function useBomb() { alert("Bomb: Destroy area!"); }
+  function useSwap() { alert("Swap: Switch 2 candies!"); }
 
-    // 看广告领道具
-    document.getElementById('adProp').onclick=()=>{
-        try{ TelegramAdsController.showAd({adType:'rewarded',onSuccess:()=>{ alert("🎁 Free Bomb Unlocked!"); }}); }
-        catch(e){ alert("⚠️ Ad loading... Please try later!"); }
-    };
+  // UI更新
+  function updateUI() {
+    document.getElementById("score").innerText = score;
+    document.getElementById("moves").innerText = moves;
+    document.getElementById("level").innerText = level;
+  }
 
-    // 启动游戏
-    init();
+  // 广告功能
+  async function watchAdForReward() {
+    if (!AG) return alert("Ads loading...");
+    try { await AG.showRewardedAd(); moves += 10; updateUI(); alert("+10 Moves Added!"); }
+    catch (e) { alert("Ad unavailable! Try later!"); }
+  }
+  async function showInterstitialAd() { if (AG) try { await AG.showInterstitialAd(); } catch (e) {} }
 </script>
 </body>
 </html>
